@@ -1,83 +1,86 @@
-// https://nodejs.org/api/process.html#process_process_argv
-@bs.module("process") external argv: array<string> = "argv"
-
 // https://nodejs.org/api/os.html#os_os_eol
 @bs.module("os") external eol: string = "EOL"
+
+let todoPath = "todo.txt"
+let donePath = "done.txt"
 
 // Functions for executing commands ---------------------------->
 
 // Appends a new todo with the given text
-let addTodo = (path: string) => {
-  if Helper.missingArg(argv) {
-    Js.log("Error: Missing todo string. Nothing added!")
-  } else {
-    let todoText = argv[3]
-
-    FileManager.appendTodos([todoText], path)
-
-    Js.log(`Added todo: "${todoText}"`)
+let addTodo = todoText => {
+  switch todoText {
+  | Some(todoTxt) => {
+      FileManager.appendTodos([todoTxt], todoPath)
+      Js.log(`Added todo: "${todoTxt}"`)
+    }
+  | None => Js.log("Error: Missing todo string. Nothing added!")
   }
 }
 
 // Shows all the pending todos
-let showTodo = (path: string) => {
-  let todos = FileManager.loadTodos(path)
+let showTodo = () => {
+  let todos = FileManager.loadTodos(todoPath)
+  let todosCount = Js.Array.length(todos)
 
   if Belt.Array.length(todos) == 0 {
     Js.log("There are no pending todos!")
   } else {
-    let todos = Belt.Array.mapWithIndex(todos, (index, todo) => {
-      `[${Belt.Int.toString(index + 1)}] ${todo}`
-    })->Belt.Array.reverse
-
-    Js.Array.joinWith(eol, todos)->Js.log
+    todos
+    ->Belt.Array.reverse
+    ->Belt.Array.reduceWithIndex("", (acc, todo, index) => {
+      acc ++ `[${Belt.Int.toString(todosCount - index)}] ${todo}` ++ eol
+    })
+    ->Js.String.trim
+    ->Js.log
   }
 }
 
 // Deletes a todo with the given index
-let delTodo = (path: string) => {
-  if Helper.missingArg(argv) {
-    Js.log("Error: Missing NUMBER for deleting todo.")
-  } else {
-    let todoIndex = Helper.stringToInt(argv[3]) - 1
+let delTodo = todoId => {
+  switch todoId {
+  | Some(id) => {
+      let todoIndex = id - 1
 
-    let todos = FileManager.loadTodos(path)
+      let todos = FileManager.loadTodos(todoPath)
 
-    if Belt.Array.length(todos) == 0 || todoIndex < 0 || todoIndex >= Belt.Array.length(todos) {
-      Js.log(`Error: todo #${Belt.Int.toString(todoIndex + 1)} does not exist. Nothing deleted.`)
-    } else {
-      let todos = todos->Helper.removeEle(todoIndex)
+      if Belt.Array.length(todos) == 0 || todoIndex < 0 || todoIndex >= Belt.Array.length(todos) {
+        Js.log(`Error: todo #${Belt.Int.toString(todoIndex + 1)} does not exist. Nothing deleted.`)
+      } else {
+        let todos = todos->Helper.removeEle(todoIndex)
 
-      FileManager.writeTodos(todos, path)
+        FileManager.writeTodos(todos, todoPath)
 
-      Js.log(`Deleted todo #${Belt.Int.toString(todoIndex + 1)}`)
+        Js.log(`Deleted todo #${Belt.Int.toString(id)}`)
+      }
     }
+  | None => Js.log("Error: Missing NUMBER for deleting todo.")
   }
 }
 
 // Marks a todo as done with the given index
-let doneTodo = (todoPath: string, donePath: string) => {
-  if Helper.missingArg(argv) {
-    Js.log("Error: Missing NUMBER for marking todo as done.")
-  } else {
-    let todoIndex = Helper.stringToInt(argv[3]) - 1
+let doneTodo = todoId => {
+  switch todoId {
+  | Some(id) => {
+      let todoIndex = id - 1
 
-    let todos = FileManager.loadTodos(todoPath)
+      let todos = FileManager.loadTodos(todoPath)
 
-    if Belt.Array.length(todos) == 0 || todoIndex < 0 || todoIndex >= Belt.Array.length(todos) {
-      Js.log(`Error: todo #${Belt.Int.toString(todoIndex + 1)} does not exist.`)
-    } else {
-      let doneTodo = todos[todoIndex]
-      let todos = todos->Helper.removeEle(todoIndex)
+      if Belt.Array.length(todos) == 0 || todoIndex < 0 || todoIndex >= Belt.Array.length(todos) {
+        Js.log(`Error: todo #${Belt.Int.toString(todoIndex + 1)} does not exist.`)
+      } else {
+        let doneTodo = todos[todoIndex]
+        let todos = todos->Helper.removeEle(todoIndex)
 
-      FileManager.writeTodos(todos, todoPath)
+        FileManager.writeTodos(todos, todoPath)
 
-      let parsedDoneTodo = `x ${Helper.getDate()} ${doneTodo}`
+        let parsedDoneTodo = `x ${Helper.getDate()} ${doneTodo}`
 
-      FileManager.appendTodos([parsedDoneTodo], donePath)
+        FileManager.appendTodos([parsedDoneTodo], donePath)
 
-      Js.log(`Marked todo #${Belt.Int.toString(todoIndex + 1)} as done.`)
+        Js.log(`Marked todo #${Belt.Int.toString(id)} as done.`)
+      }
     }
+  | None => Js.log("Error: Missing NUMBER for marking todo as done.")
   }
 }
 
@@ -95,7 +98,7 @@ $ ./todo report           # Statistics"
 }
 
 // Shows reports of all the todos
-let showReport = (todoPath: string, donePath: string) => {
+let showReport = () => {
   let todoCount = Belt.Array.length(FileManager.loadTodos(todoPath))
   let doneCount = Belt.Array.length(FileManager.loadTodos(donePath))
   Js.log(

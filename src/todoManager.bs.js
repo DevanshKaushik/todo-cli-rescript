@@ -3,69 +3,71 @@
 
 var Os = require("os");
 var Helper = require("./helper.bs.js");
-var Process = require("process");
 var Belt_Array = require("bs-platform/lib/js/belt_Array.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var FileManager = require("./fileManager.bs.js");
 
-function addTodo(path) {
-  if (Helper.missingArg(Process.argv)) {
+var todoPath = "todo.txt";
+
+var donePath = "done.txt";
+
+function addTodo(todoText) {
+  if (todoText !== undefined) {
+    FileManager.appendTodos([todoText], todoPath);
+    console.log("Added todo: \"" + todoText + "\"");
+  } else {
     console.log("Error: Missing todo string. Nothing added!");
-    return ;
   }
-  var todoText = Caml_array.get(Process.argv, 3);
-  FileManager.appendTodos([todoText], path);
-  console.log("Added todo: \"" + todoText + "\"");
   
 }
 
-function showTodo(path) {
-  var todos = FileManager.loadTodos(path);
+function showTodo(param) {
+  var todos = FileManager.loadTodos(todoPath);
+  var todosCount = todos.length;
   if (todos.length === 0) {
     console.log("There are no pending todos!");
-    return ;
+  } else {
+    console.log(Belt_Array.reduceWithIndex(Belt_Array.reverse(todos), "", (function (acc, todo, index) {
+                  return acc + ("[" + String(todosCount - index | 0) + "] " + todo) + Os.EOL;
+                })).trim());
   }
-  var todos$1 = Belt_Array.reverse(Belt_Array.mapWithIndex(todos, (function (index, todo) {
-              return "[" + String(index + 1 | 0) + "] " + todo;
-            })));
-  console.log(todos$1.join(Os.EOL));
   
 }
 
-function delTodo(path) {
-  if (Helper.missingArg(Process.argv)) {
-    console.log("Error: Missing NUMBER for deleting todo.");
+function delTodo(todoId) {
+  if (todoId !== undefined) {
+    var todoIndex = todoId - 1 | 0;
+    var todos = FileManager.loadTodos(todoPath);
+    if (todos.length === 0 || todoIndex < 0 || todoIndex >= todos.length) {
+      console.log("Error: todo #" + String(todoIndex + 1 | 0) + " does not exist. Nothing deleted.");
+      return ;
+    }
+    var todos$1 = Helper.removeEle(todos, todoIndex);
+    FileManager.writeTodos(todos$1, todoPath);
+    console.log("Deleted todo #" + String(todoId));
     return ;
   }
-  var todoIndex = Helper.stringToInt(Caml_array.get(Process.argv, 3)) - 1 | 0;
-  var todos = FileManager.loadTodos(path);
-  if (todos.length === 0 || todoIndex < 0 || todoIndex >= todos.length) {
-    console.log("Error: todo #" + String(todoIndex + 1 | 0) + " does not exist. Nothing deleted.");
-    return ;
-  }
-  var todos$1 = Helper.removeEle(todos, todoIndex);
-  FileManager.writeTodos(todos$1, path);
-  console.log("Deleted todo #" + String(todoIndex + 1 | 0));
+  console.log("Error: Missing NUMBER for deleting todo.");
   
 }
 
-function doneTodo(todoPath, donePath) {
-  if (Helper.missingArg(Process.argv)) {
-    console.log("Error: Missing NUMBER for marking todo as done.");
+function doneTodo(todoId) {
+  if (todoId !== undefined) {
+    var todoIndex = todoId - 1 | 0;
+    var todos = FileManager.loadTodos(todoPath);
+    if (todos.length === 0 || todoIndex < 0 || todoIndex >= todos.length) {
+      console.log("Error: todo #" + String(todoIndex + 1 | 0) + " does not exist.");
+      return ;
+    }
+    var doneTodo$1 = Caml_array.get(todos, todoIndex);
+    var todos$1 = Helper.removeEle(todos, todoIndex);
+    FileManager.writeTodos(todos$1, todoPath);
+    var parsedDoneTodo = "x " + Helper.getDate(undefined) + " " + doneTodo$1;
+    FileManager.appendTodos([parsedDoneTodo], donePath);
+    console.log("Marked todo #" + String(todoId) + " as done.");
     return ;
   }
-  var todoIndex = Helper.stringToInt(Caml_array.get(Process.argv, 3)) - 1 | 0;
-  var todos = FileManager.loadTodos(todoPath);
-  if (todos.length === 0 || todoIndex < 0 || todoIndex >= todos.length) {
-    console.log("Error: todo #" + String(todoIndex + 1 | 0) + " does not exist.");
-    return ;
-  }
-  var doneTodo$1 = Caml_array.get(todos, todoIndex);
-  var todos$1 = Helper.removeEle(todos, todoIndex);
-  FileManager.writeTodos(todos$1, todoPath);
-  var parsedDoneTodo = "x " + Helper.getDate(undefined) + " " + doneTodo$1;
-  FileManager.appendTodos([parsedDoneTodo], donePath);
-  console.log("Marked todo #" + String(todoIndex + 1 | 0) + " as done.");
+  console.log("Error: Missing NUMBER for marking todo as done.");
   
 }
 
@@ -74,13 +76,15 @@ function showHelp(param) {
   
 }
 
-function showReport(todoPath, donePath) {
+function showReport(param) {
   var todoCount = FileManager.loadTodos(todoPath).length;
   var doneCount = FileManager.loadTodos(donePath).length;
   console.log(Helper.getDate(undefined) + " Pending : " + String(todoCount) + " Completed : " + String(doneCount));
   
 }
 
+exports.todoPath = todoPath;
+exports.donePath = donePath;
 exports.addTodo = addTodo;
 exports.showTodo = showTodo;
 exports.delTodo = delTodo;

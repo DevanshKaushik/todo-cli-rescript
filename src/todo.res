@@ -1,22 +1,24 @@
-/* https://nodejs.org/api/process.html#process_process_argv */
+// https://nodejs.org/api/process.html#process_process_argv
 @bs.val external argv: array<string> = "process.argv"
-
-let todo_path = "todo.txt"
-let done_path = "done.txt"
 
 // Driver code ---------------------------->
 
-if Js.Array.length(argv) <= 2 {
-  TodoManager.showHelp()
-} else {
-  let cmd = argv[2]->Js.String.trim->Js.String.toLowerCase
+let command = argv->Belt.Array.get(2)
+let arg = argv->Belt.Array.get(3)
+let todoId = arg->Belt.Option.flatMap(Belt.Int.fromString)
+
+switch command {
+| Some(cmd) =>
+  let cmd = cmd->Js.String.trim->Js.String.toLowerCase
+
   switch cmd {
-  | "add" => TodoManager.addTodo(todo_path)
-  | "ls" => TodoManager.showTodo(todo_path)
-  | "del" => TodoManager.delTodo(todo_path)
-  | "done" => TodoManager.doneTodo(todo_path, done_path)
+  | "add" => TodoManager.addTodo(arg)
+  | "ls" => TodoManager.showTodo()
+  | "del" => TodoManager.delTodo(todoId)
+  | "done" => TodoManager.doneTodo(todoId)
   | "help" => TodoManager.showHelp()
-  | "report" => TodoManager.showReport(todo_path, done_path)
+  | "report" => TodoManager.showReport()
   | _ => TodoManager.showHelp()
   }
+| None => TodoManager.showHelp()
 }

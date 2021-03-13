@@ -1,18 +1,5 @@
 // Helper Functions ---------------------------->
 
-// Return true if enough arguments are not provided and false otherwise
-let missingArg = argv => Js.Array.length(argv) < 4 ? true : false
-
-// Converts string to int and returns -1 for invalid value
-let stringToInt = value => {
-  let value = Belt.Int.fromString(value)
-
-  switch value {
-  | Some(y) => y
-  | None => -1
-  }
-}
-
 // Removes item with the provided index from the given array
 let removeEle = (arr, index) => {
   Belt.Array.keepWithIndex(arr, (_, i) => i != index)
